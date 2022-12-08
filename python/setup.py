@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2021 Hatching B.V.
+# Copyright (C) 2020-2022 Hatching B.V.
 # All rights reserved.
 
 import setuptools
@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="hatching-triage",
-    version="0.1.5",
+    version="0.1.8",
     author="Hatching B.V.",
     author_email="info@hatching.io",
     description="API client and CLI for Hatching Triage",
@@ -24,7 +24,7 @@ setuptools.setup(
     install_requires=[
         "appdirs==1.4.4",
         "click==8.0.3",
-        "requests==2.25.1"
+        "requests>=2.25.1, <3"
     ],
     python_requires='>=3.6',
 )

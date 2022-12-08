@@ -20,7 +20,9 @@ class Client:
         self.token = token
         self.root_url = root_url.rstrip('/')
 
-    def _new_request(self, method, path, j=None, b=None, headers={}):
+    def _new_request(self, method, path, j=None, b=None, headers=None):
+        if headers is None:
+            headers = {}
         headers = {
             'Authorization': 'Bearer {0}'.format(self.token),
             'User-Agent': 'Triage Python Client/{0} Python/{1}'
@@ -53,8 +55,7 @@ class Client:
         except exceptions.HTTPError as err:
             raise ServerError(err)
 
-    def submit_sample_file(self, filename, file, interactive=False,
-                           profiles=[], password=None):
+    def submit_sample_file(self, filename, file, interactive=False, profiles=None, password=None, timeout=60, network="internet"):
         """
         Submit a file for analysis on Triage.
 
@@ -75,6 +76,10 @@ class Client:
                 ]
             password (str):
                 Password for the archive sample
+            timeout: (int):
+                Timeout of the analysis
+            network (str):
+                Type of network routing to use ("internet" | "drop" | "tor")
         Returns:
             response (dict):
                 {
@@ -86,10 +91,16 @@ class Client:
                     'submitted': '2020-09-23T07:26:26Z'
                 }
         """
+        if profiles is None:
+            profiles = []
         d = {
             'kind': 'file',
             'interactive': interactive,
             'profiles': profiles,
+            'defaults': {
+                'timeout': timeout,
+                'network': network
+            }
         }
         if password:
             d['password'] = password
@@ -109,7 +120,7 @@ class Client:
         except exceptions.HTTPError as err:
             raise ServerError(err)
 
-    def submit_sample_url(self, url, interactive=False, profiles=[]):
+    def submit_sample_url(self, url, interactive=False, profiles=None):
         """
         Submit a url for analysis on Triage.
 
@@ -135,6 +146,8 @@ class Client:
                     'submitted': '2020-09-23T07:51:45Z'
                 }
         """
+        if profiles is None:
+            profiles = []
         return self._req_json('POST', '/v0/samples', {
             'kind': 'url',
             'url': url,
@@ -166,7 +179,7 @@ class Client:
             'profiles': profiles,
         })
 
-    def set_sample_profile_automatically(self, sample_id, pick=[]):
+    def set_sample_profile_automatically(self, sample_id, pick=None):
         """
         Set profile for a sample automatically, if the sample has been
         submitted in interactive mode.
@@ -183,6 +196,8 @@ class Client:
             response (dict):
                 {}, empty dict
         """
+        if pick is None:
+            pick = []
         return self._req_json('POST', '/v0/samples/%s/profile' % sample_id, {
             'auto': True,
             'pick': pick,
@@ -344,25 +359,30 @@ class Client:
             ]
         """
         overview = self.overview_report(sample_id)
-        for t in overview["tasks"]:
-            if t["name"] == task_id:
+        for t in overview.get("tasks", []):
+            if t.get("name") == task_id:
                 task = t
                 break
         else:
             raise ValueError("Task does not exist")
 
-        if "windows" in task["platform"]:
-            r =  self._new_request(
-                'GET', '/v0/samples/{0}/{1}/logs/onemon.json'.format(
-                    sample_id, task_id)
-            )
-        elif "linux" in task["platform"]:
-            r =  self._new_request(
-                'GET', '/v0/samples/{0}/{1}/logs/stahp.json'.format(
-                    sample_id, task_id)
-            )
+        log_file = None
+        platform = task.get("platform") or task.get("os")
+        if "windows" in platform:
+            log_file = "onemon"
+        elif "linux" in platform or "ubuntu" in platform:
+            log_file = "stahp"
+        elif "macos" in platform:
+            log_file = "bigmac"
+        elif "android" in platform:
+            log_file = "droidy"
         else:
             raise ValueError("Platform not supported")
+
+        r = self._new_request(
+            'GET', '/v0/samples/{0}/{1}/logs/{2}.json'.format(
+                sample_id, task_id, log_file)
+        )
 
         with Session() as s:
             settings = s.merge_environment_settings(r.url, {}, None, False, None)
