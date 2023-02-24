@@ -205,7 +205,7 @@ class Client:
 
     def org_samples(self, max=20):
         """
-        Returns a Paginator object with owned samples.
+        Returns a Paginator object with org samples.
 
         Parameters:
             max (int): The maximum amount of samples to return
