@@ -203,6 +203,20 @@ class Client:
             'pick': pick,
         })
 
+    def org_samples(self, max=20):
+        """
+        Returns a Paginator object with org samples.
+
+        Parameters:
+            max (int): The maximum amount of samples to return
+
+        Returns:
+            Paginator (object):
+                Loop over this object to get the samples
+        """
+        return Paginator(self, '/v0/samples?subset=org', max)
+
+
     def owned_samples(self, max=20):
         """
         Returns a Paginator object with owned samples.
