@@ -223,9 +223,17 @@ def paginator_format(c, i):
 @click.option("-n", default=20, show_default=True,
               help="The maximum number of samples to return")
 @click.option("-p", "--public", is_flag=True, help="List public samples")
-def list_samples(public, n):
+@click.option("-o", "--org", is_flag=True, help="List org samples")
+def list_samples(public, org, n):
     c = client_from_env()
-    for i in c.public_samples(max=n) if public else c.owned_samples(max=n):
+    if public:
+        samples = c.public_samples(max=n)
+    elif org:
+        samples = c.org_samples(max=n)
+    else:
+        samples = c.owned_samples(max=n)
+
+    for i in samples:
         paginator_format(c, i)
 
 @cli.command("file")
